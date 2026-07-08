@@ -36,20 +36,33 @@ public final class ShopEvents {
 
 		String chestName = stack.getName().getString();
 		return ShopItemNbt.readPreparedShop(stack, world.getRegistryKey(), pos)
-				.filter(record -> chestName.startsWith(ShopNameParser.formatShopName(record.priceAmount(), record.priceItem())))
-				.or(() -> ShopNameParser.parsePriceName(chestName)
-						.map(parsed -> new ShopRecord(player.getUuid(), world.getRegistryKey(), pos.toImmutable(), parsed.priceItem(), parsed.priceAmount())))
 				.map(record -> {
-					ShopStorage.get(world).putShop(record);
-					return ShopPlacementResult.CREATED;
+					if (!chestName.startsWith(ShopNameParser.formatShopName(record.priceAmount(), record.priceItem()))) {
+						return ShopPlacementResult.INVALID_NAME;
+					}
+
+					return createShopIfAllowed(world, pos, record);
 				})
-				.orElse(ShopPlacementResult.INVALID_NAME);
+				.or(() -> ShopNameParser.parsePriceName(chestName)
+						.map(parsed -> new ShopRecord(player.getUuid(), world.getRegistryKey(), pos.toImmutable(), parsed.priceItem(), parsed.priceAmount()))
+						.map(record -> createShopIfAllowed(world, pos, record)))
+				.orElse(ShopPlacementResult.IGNORED);
+	}
+
+	private static ShopPlacementResult createShopIfAllowed(ServerWorld world, BlockPos pos, ShopRecord record) {
+		if (!RegionChecks.isShopPlacementAllowed(world, pos)) {
+			return ShopPlacementResult.OUTSIDE_REGION;
+		}
+
+		ShopStorage.get(world).putShop(record);
+		return ShopPlacementResult.CREATED;
 	}
 
 	public enum ShopPlacementResult {
 		IGNORED,
 		CREATED,
-		INVALID_NAME
+		INVALID_NAME,
+		OUTSIDE_REGION
 	}
 
 	private static ActionResult onUseBlock(PlayerEntity player, World world, Hand hand, BlockHitResult hitResult) {

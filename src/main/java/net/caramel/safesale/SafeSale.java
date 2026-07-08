@@ -20,6 +20,7 @@ public class SafeSale implements ModInitializer {
 		ShopScreens.register();
 		SafeSaleCommands.register();
 		ShopEvents.register();
+		RegionPreview.register();
 		LOGGER.info("SafeSale initialized");
 	}
 

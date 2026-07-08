@@ -29,6 +29,7 @@ public abstract class BlockItemMixin {
 			switch (result) {
 				case CREATED -> serverPlayer.sendMessage(Text.literal("Shop created"), false);
 				case INVALID_NAME -> serverPlayer.sendMessage(Text.literal("Shop couldnt be created check the name of the item"), false);
+				case OUTSIDE_REGION -> serverPlayer.sendMessage(Text.literal("chest shop is outside of shop region"), false);
 				case IGNORED -> {
 				}
 			}

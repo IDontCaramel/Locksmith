@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "safesale",
+	"version": "${version}",
+	"name": "SafeSale",
+	"description": "A mod for making easy and vanila style player shops",
+	"authors": [
+		"I_Dont_Caramel"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/safesale/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.caramel.safesale.SafeSale"
+		]
+	},
+	"mixins": [
+		"safesale.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
+	}
+}

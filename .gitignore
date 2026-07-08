@@ -1,0 +1,41 @@
+# Project-local agent and reference files
+/fabric-api-src/
+/AGENTS.md
+/fabric-api-guide.md
+/docs/
+
+# Gradle
+.gradle/
+build/
+out/
+classes/
+
+# Eclipse
+*.launch
+.classpath
+.project
+.settings/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+bin/
+
+# macOS
+.DS_Store
+*.DS_Store
+
+# Fabric run directory
+run/
+
+# Java crash/profiling output
+hs_err_*.log
+replay_*.log
+*.hprof
+*.jfr
+cleanup.md

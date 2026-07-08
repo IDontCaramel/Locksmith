@@ -76,7 +76,7 @@ public final class ShopEvents {
 	private static ActionResult handleShopUse(ServerPlayerEntity player, ServerWorld world, BlockPos pos) {
 		return ShopStorage.get(world).getShop(world.getRegistryKey(), pos)
 				.map(record -> {
-					if (record.isOwner(player.getUuid())) {
+					if (hasOwnerAccess(record, player)) {
 						return ActionResult.PASS;
 					}
 
@@ -93,6 +93,10 @@ public final class ShopEvents {
 				.orElse(ActionResult.PASS);
 	}
 
+	private static boolean hasOwnerAccess(ShopRecord record, ServerPlayerEntity player) {
+		return record.isOwner(player.getUuid()) || AdminShopAccess.isEnabled(player.getUuid());
+	}
+
 	private static boolean beforeBlockBreak(World world, PlayerEntity player, BlockPos pos, net.minecraft.block.BlockState state, BlockEntity blockEntity) {
 		if (!(world instanceof ServerWorld serverWorld) || !(player instanceof ServerPlayerEntity serverPlayer)) {
 			return true;
@@ -100,7 +104,7 @@ public final class ShopEvents {
 
 		return ShopStorage.get(serverWorld).getShop(serverWorld.getRegistryKey(), pos)
 				.map(record -> {
-					if (record.isOwner(serverPlayer.getUuid())) {
+					if (hasOwnerAccess(record, serverPlayer)) {
 						ShopStorage.get(serverWorld).removeShop(serverWorld.getRegistryKey(), pos);
 						return true;
 					}

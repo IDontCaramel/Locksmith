@@ -38,6 +38,9 @@ public final class SafeSaleCommands {
 
 	private static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
 		dispatcher.register(literal("safesale")
+				.then(literal("admin")
+						.requires(source -> source.hasPermissionLevel(2))
+						.executes(SafeSaleCommands::executeAdmin))
 				.then(literal("sell")
 						.then(argument("priceAmount", integer(1, 64))
 								.then(argument("priceItem", ItemStackArgumentType.itemStack(registryAccess))
@@ -56,6 +59,7 @@ public final class SafeSaleCommands {
 								.executes(SafeSaleCommands::executeListRegions))
 						.then(literal("delete")
 								.then(argument("region_name", word())
+										.suggests(REGION_NAME_SUGGESTIONS)
 										.executes(SafeSaleCommands::executeDeleteRegion)))
 						.then(literal("preview")
 								.executes(SafeSaleCommands::executePreviewSelection)
@@ -65,6 +69,13 @@ public final class SafeSaleCommands {
 						.then(literal("spawnradius")
 								.then(argument("radius", integer(0))
 										.executes(SafeSaleCommands::executeSetSpawnRadius)))));
+	}
+
+	private static int executeAdmin(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+		ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+		boolean enabled = AdminShopAccess.toggle(player.getUuid());
+		sendPrivate(player, "shop acces " + enabled);
+		return enabled ? 1 : 0;
 	}
 
 	private static int executeSell(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {

@@ -32,7 +32,9 @@ public final class ShopEvents {
 
 		String chestName = stack.getName().getString();
 		ShopItemNbt.readPreparedShop(stack, world.getRegistryKey(), pos)
-				.filter(record -> chestName.equals(ShopNameParser.formatShopName(record.priceAmount(), record.priceItem())))
+				.filter(record -> chestName.startsWith(ShopNameParser.formatShopName(record.priceAmount(), record.priceItem())))
+				.or(() -> ShopNameParser.parsePriceName(chestName)
+						.map(parsed -> new ShopRecord(player.getUuid(), world.getRegistryKey(), pos.toImmutable(), parsed.priceItem(), parsed.priceAmount())))
 				.ifPresent(record -> {
 					ShopStorage.get(world).putShop(record);
 					player.sendMessage(Text.literal("Shop chest created"), false);

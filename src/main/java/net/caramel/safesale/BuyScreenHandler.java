@@ -38,10 +38,16 @@ public final class BuyScreenHandler extends GenericContainerScreenHandler {
 
 	@Override
 	public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
-		if (slotIndex >= 0 && slotIndex < CHEST_SLOTS && player instanceof ServerPlayerEntity) {
+		if (isShopDisplaySlot(slotIndex) && player instanceof ServerPlayerEntity) {
 			ShopTransaction.purchase(this.player, record, slotIndex);
+		} else {
+			super.onSlotClick(slotIndex, button, actionType, player);
 		}
 		refreshDisplay();
+	}
+
+	static boolean isShopDisplaySlot(int slotIndex) {
+		return slotIndex >= 0 && slotIndex < CHEST_SLOTS;
 	}
 
 	@Override

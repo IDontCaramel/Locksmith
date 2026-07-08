@@ -26,14 +26,19 @@ public final class ShopEvents {
 	}
 
 	public static void createShopFromPlacedChest(ServerPlayerEntity player, ServerWorld world, ItemStack stack, BlockPos pos) {
-		if (!world.getBlockState(pos).isOf(Blocks.CHEST)) {
+		if (!world.getBlockState(pos).isOf(Blocks.CHEST) || !stack.hasCustomName()) {
 			return;
 		}
 
-		ShopItemNbt.readPreparedShop(stack, world.getRegistryKey(), pos).ifPresent(record -> {
-			ShopStorage.get(world).putShop(record);
-			player.sendMessage(Text.literal("Shop chest created."), false);
-		});
+		String chestName = stack.getName().getString();
+		ShopItemNbt.readPreparedShop(stack, world.getRegistryKey(), pos)
+				.filter(record -> chestName.equals(ShopNameParser.formatShopName(record.sellAmount(), record.sellItem(), record.priceAmount(), record.priceItem())))
+				.or(() -> ShopNameParser.parse(chestName)
+						.map(parsed -> new ShopRecord(player.getUuid(), world.getRegistryKey(), pos.toImmutable(), parsed.sellItem(), parsed.sellAmount(), parsed.priceItem(), parsed.priceAmount())))
+				.ifPresent(record -> {
+					ShopStorage.get(world).putShop(record);
+					player.sendMessage(Text.literal("Shop chest created"), false);
+				});
 	}
 
 	private static ActionResult onUseBlock(PlayerEntity player, World world, Hand hand, BlockHitResult hitResult) {
@@ -54,7 +59,7 @@ public final class ShopEvents {
 					BlockEntity blockEntity = world.getBlockEntity(pos);
 					if (!(blockEntity instanceof ChestBlockEntity)) {
 						ShopStorage.get(world).removeShop(world.getRegistryKey(), pos);
-						player.sendMessage(Text.literal("This shop is no longer valid."), false);
+						player.sendMessage(Text.literal("This shop is no longer valid"), false);
 						return ActionResult.FAIL;
 					}
 
@@ -76,7 +81,7 @@ public final class ShopEvents {
 						return true;
 					}
 
-					serverPlayer.sendMessage(Text.literal("Only the shop owner can break this chest."), false);
+					serverPlayer.sendMessage(Text.literal("Only the shop owner can break this chest"), false);
 					return false;
 				})
 				.orElse(true);

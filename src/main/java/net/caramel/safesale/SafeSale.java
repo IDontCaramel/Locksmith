@@ -18,9 +18,9 @@ public class SafeSale implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ShopScreens.register();
-		LocksmithCommands.register();
+		SafeSaleCommands.register();
 		ShopEvents.register();
-		LOGGER.info("SafeSale initialized.");
+		LOGGER.info("SafeSale initialized");
 	}
 
 	public static Identifier id(String path) {

@@ -3,7 +3,6 @@ package net.caramel.safesale;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.ItemStackArgument;
@@ -15,15 +14,13 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 
-import java.util.Locale;
-
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
-public final class LocksmithCommands {
-	private LocksmithCommands() {
+public final class SafeSaleCommands {
+	private SafeSaleCommands() {
 	}
 
 	public static void register() {
@@ -31,15 +28,13 @@ public final class LocksmithCommands {
 	}
 
 	private static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
-		LiteralCommandNode<ServerCommandSource> locksmith = dispatcher.register(literal("locksmith")
+		dispatcher.register(literal("safesale")
 				.then(literal("sell")
 						.then(argument("sellAmount", integer(1, 64))
 								.then(argument("sellItem", ItemStackArgumentType.itemStack(registryAccess))
 										.then(argument("priceAmount", integer(1, 64))
 												.then(argument("priceItem", ItemStackArgumentType.itemStack(registryAccess))
-														.executes(LocksmithCommands::executeSell)))))));
-
-		dispatcher.register(literal("ls").redirect(locksmith));
+														.executes(SafeSaleCommands::executeSell)))))));
 	}
 
 	private static int executeSell(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
@@ -61,7 +56,7 @@ public final class LocksmithCommands {
 	private static boolean prepareSellChest(ServerPlayerEntity player, String chestName, Item sellItem, int sellAmount, Item priceItem, int priceAmount) {
 		ItemStack heldStack = player.getMainHandStack();
 		if (!heldStack.isOf(Items.CHEST)) {
-			sendPrivate(player, "You must hold a normal chest to prepare a sell chest.");
+			sendPrivate(player, "You must hold a normal chest to prepare a sell chest");
 			return false;
 		}
 
@@ -76,7 +71,7 @@ public final class LocksmithCommands {
 
 		int emptySlot = player.getInventory().getEmptySlot();
 		if (emptySlot == -1) {
-			sendPrivate(player, "You need a free inventory slot to prepare one chest from a stack.");
+			sendPrivate(player, "You need a free inventory slot to prepare one chest from a stack");
 			return false;
 		}
 
@@ -86,11 +81,7 @@ public final class LocksmithCommands {
 	}
 
 	private static String formatChestName(int sellAmount, ItemStackArgument sellItem, int priceAmount, ItemStackArgument priceItem) {
-		return sellAmount + " " + formatItemName(sellItem.getItem()) + " - " + priceAmount + " " + formatItemName(priceItem.getItem());
-	}
-
-	private static String formatItemName(Item item) {
-		return item.getName().getString().toLowerCase(Locale.ROOT);
+		return ShopNameParser.formatShopName(sellAmount, sellItem.getItem(), priceAmount, priceItem.getItem());
 	}
 
 	private static void sendPrivate(ServerPlayerEntity player, String message) {

@@ -25,20 +25,31 @@ public final class ShopEvents {
 		PlayerBlockBreakEvents.BEFORE.register(ShopEvents::beforeBlockBreak);
 	}
 
-	public static void createShopFromPlacedChest(ServerPlayerEntity player, ServerWorld world, ItemStack stack, BlockPos pos) {
-		if (!world.getBlockState(pos).isOf(Blocks.CHEST) || !stack.hasCustomName()) {
-			return;
+	public static ShopPlacementResult createShopFromPlacedChest(ServerPlayerEntity player, ServerWorld world, ItemStack stack, BlockPos pos) {
+		if (!world.getBlockState(pos).isOf(Blocks.CHEST)) {
+			return ShopPlacementResult.IGNORED;
+		}
+
+		if (!stack.hasCustomName()) {
+			return ShopPlacementResult.IGNORED;
 		}
 
 		String chestName = stack.getName().getString();
-		ShopItemNbt.readPreparedShop(stack, world.getRegistryKey(), pos)
+		return ShopItemNbt.readPreparedShop(stack, world.getRegistryKey(), pos)
 				.filter(record -> chestName.startsWith(ShopNameParser.formatShopName(record.priceAmount(), record.priceItem())))
 				.or(() -> ShopNameParser.parsePriceName(chestName)
 						.map(parsed -> new ShopRecord(player.getUuid(), world.getRegistryKey(), pos.toImmutable(), parsed.priceItem(), parsed.priceAmount())))
-				.ifPresent(record -> {
+				.map(record -> {
 					ShopStorage.get(world).putShop(record);
-					player.sendMessage(Text.literal("Shop chest created"), false);
-				});
+					return ShopPlacementResult.CREATED;
+				})
+				.orElse(ShopPlacementResult.INVALID_NAME);
+	}
+
+	public enum ShopPlacementResult {
+		IGNORED,
+		CREATED,
+		INVALID_NAME
 	}
 
 	private static ActionResult onUseBlock(PlayerEntity player, World world, Hand hand, BlockHitResult hitResult) {

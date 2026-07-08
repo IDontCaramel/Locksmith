@@ -6,6 +6,7 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
@@ -24,7 +25,13 @@ public abstract class BlockItemMixin {
 		World world = context.getWorld();
 		PlayerEntity player = context.getPlayer();
 		if (world instanceof ServerWorld serverWorld && player instanceof ServerPlayerEntity serverPlayer) {
-			ShopEvents.createShopFromPlacedChest(serverPlayer, serverWorld, context.getStack(), context.getBlockPos());
+			ShopEvents.ShopPlacementResult result = ShopEvents.createShopFromPlacedChest(serverPlayer, serverWorld, context.getStack(), context.getBlockPos());
+			switch (result) {
+				case CREATED -> serverPlayer.sendMessage(Text.literal("Shop created"), false);
+				case INVALID_NAME -> serverPlayer.sendMessage(Text.literal("Shop couldnt be created check the name of the item"), false);
+				case IGNORED -> {
+				}
+			}
 		}
 	}
 }

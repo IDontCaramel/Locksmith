@@ -11,8 +11,6 @@ public record ShopRecord(
 		UUID ownerUuid,
 		RegistryKey<World> worldKey,
 		BlockPos pos,
-		Item sellItem,
-		int sellAmount,
 		Item priceItem,
 		int priceAmount
 ) {

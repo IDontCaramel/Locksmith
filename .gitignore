@@ -1,4 +1,5 @@
 # Project-local agent and reference files
+.worktrees/
 /fabric-api-src/
 /AGENTS.md
 /fabric-api-guide.md

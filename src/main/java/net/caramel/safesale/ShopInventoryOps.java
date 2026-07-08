@@ -9,11 +9,15 @@ final class ShopInventoryOps {
 	}
 
 	static boolean purchaseSlot(Inventory buyerInventory, Inventory chestInventory, ShopRecord record, int chestSlot) {
-		if (!isExactSaleSlot(chestInventory, record, chestSlot)) {
+		if (chestSlot < 0 || chestSlot >= chestInventory.size()) {
 			return false;
 		}
 
 		ItemStack soldStack = chestInventory.getStack(chestSlot).copy();
+		if (soldStack.isEmpty()) {
+			return false;
+		}
+
 		ItemStack priceStack = new ItemStack(record.priceItem(), record.priceAmount());
 		if (countItem(buyerInventory, record.priceItem()) < record.priceAmount()) {
 			return false;
@@ -29,15 +33,6 @@ final class ShopInventoryOps {
 		chestInventory.markDirty();
 		buyerInventory.markDirty();
 		return true;
-	}
-
-	static boolean isExactSaleSlot(Inventory chestInventory, ShopRecord record, int chestSlot) {
-		if (chestSlot < 0 || chestSlot >= chestInventory.size()) {
-			return false;
-		}
-
-		ItemStack stack = chestInventory.getStack(chestSlot);
-		return stack.isOf(record.sellItem()) && stack.getCount() == record.sellAmount();
 	}
 
 	private static int countItem(Inventory inventory, Item item) {

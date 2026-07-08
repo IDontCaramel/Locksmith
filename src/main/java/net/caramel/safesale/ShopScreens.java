@@ -16,7 +16,7 @@ public final class ShopScreens {
 		player.openHandledScreen(new NamedScreenHandlerFactory() {
 			@Override
 			public Text getDisplayName() {
-				return Text.literal(record.sellAmount() + " for " + record.priceAmount());
+				return Text.literal("Price: " + ShopNameParser.formatShopName(record.priceAmount(), record.priceItem()));
 			}
 
 			@Override

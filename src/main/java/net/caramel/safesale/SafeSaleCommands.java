@@ -30,22 +30,18 @@ public final class SafeSaleCommands {
 	private static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess) {
 		dispatcher.register(literal("safesale")
 				.then(literal("sell")
-						.then(argument("sellAmount", integer(1, 64))
-								.then(argument("sellItem", ItemStackArgumentType.itemStack(registryAccess))
-										.then(argument("priceAmount", integer(1, 64))
-												.then(argument("priceItem", ItemStackArgumentType.itemStack(registryAccess))
-														.executes(SafeSaleCommands::executeSell)))))));
+						.then(argument("priceAmount", integer(1, 64))
+								.then(argument("priceItem", ItemStackArgumentType.itemStack(registryAccess))
+										.executes(SafeSaleCommands::executeSell)))));
 	}
 
 	private static int executeSell(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
 		ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
-		int sellAmount = getInteger(context, "sellAmount");
-		ItemStackArgument sellItem = ItemStackArgumentType.getItemStackArgument(context, "sellItem");
 		int priceAmount = getInteger(context, "priceAmount");
 		ItemStackArgument priceItem = ItemStackArgumentType.getItemStackArgument(context, "priceItem");
 
-		String chestName = formatChestName(sellAmount, sellItem, priceAmount, priceItem);
-		if (!prepareSellChest(player, chestName, sellItem.getItem(), sellAmount, priceItem.getItem(), priceAmount)) {
+		String chestName = formatChestName(priceAmount, priceItem);
+		if (!prepareSellChest(player, chestName, priceItem.getItem(), priceAmount)) {
 			return 0;
 		}
 
@@ -53,7 +49,7 @@ public final class SafeSaleCommands {
 		return 1;
 	}
 
-	private static boolean prepareSellChest(ServerPlayerEntity player, String chestName, Item sellItem, int sellAmount, Item priceItem, int priceAmount) {
+	private static boolean prepareSellChest(ServerPlayerEntity player, String chestName, Item priceItem, int priceAmount) {
 		ItemStack heldStack = player.getMainHandStack();
 		if (!heldStack.isOf(Items.CHEST)) {
 			sendPrivate(player, "You must hold a normal chest to prepare a sell chest");
@@ -62,7 +58,7 @@ public final class SafeSaleCommands {
 
 		ItemStack renamedChest = new ItemStack(Items.CHEST);
 		renamedChest.setCustomName(Text.literal(chestName));
-		ShopItemNbt.writePreparedShop(renamedChest, player.getUuid(), sellItem, sellAmount, priceItem, priceAmount);
+		ShopItemNbt.writePreparedShop(renamedChest, player.getUuid(), priceItem, priceAmount);
 
 		if (heldStack.getCount() == 1) {
 			player.getInventory().setStack(player.getInventory().selectedSlot, renamedChest);
@@ -80,8 +76,8 @@ public final class SafeSaleCommands {
 		return true;
 	}
 
-	private static String formatChestName(int sellAmount, ItemStackArgument sellItem, int priceAmount, ItemStackArgument priceItem) {
-		return ShopNameParser.formatShopName(sellAmount, sellItem.getItem(), priceAmount, priceItem.getItem());
+	private static String formatChestName(int priceAmount, ItemStackArgument priceItem) {
+		return ShopNameParser.formatShopName(priceAmount, priceItem.getItem());
 	}
 
 	private static void sendPrivate(ServerPlayerEntity player, String message) {

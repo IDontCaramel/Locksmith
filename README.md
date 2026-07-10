@@ -33,7 +33,7 @@ Admins can also set regions where shops can be placed and there is also a defaul
 
 | Command | Description |
 |---------|-------------|
-| `/safesale admin` | Toggles admin shop access mode — allows opening any shop chest |
+| `/safesale admin` | Toggles admin shop access mode allows opening any shop chest |
 | `/safesale region set pos1` | Sets the first corner of a new shop region at your current position |
 | `/safesale region set pos2` | Sets the second corner of a new shop region at your current position |
 | `/safesale region confirm <name>` | Creates the shop region from the two set positions |

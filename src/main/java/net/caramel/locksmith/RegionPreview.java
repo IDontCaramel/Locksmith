@@ -1,27 +1,36 @@
 package net.caramel.locksmith;
 
+import com.mojang.math.Transformation;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Brightness;
+import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 public final class RegionPreview {
-	private static final DustParticleOptions POS1_PARTICLE = new DustParticleOptions(0xFF1A1A, 1.2F);
-	private static final DustParticleOptions POS2_PARTICLE = new DustParticleOptions(0x1A4DFF, 1.2F);
-	private static final DustParticleOptions OUTLINE_PARTICLE = new DustParticleOptions(0x33FF33, 1.0F);
-	private static final int REDRAW_INTERVAL_TICKS = 10;
+	private static final float BEAM_WIDTH = 0.06F;
 	private static final int NAMED_PREVIEW_TICKS = 20 * 10;
-	private static final int MAX_PARTICLES_PER_DRAW = 300;
-	private static final Map<UUID, ActivePreview> ACTIVE_PREVIEWS = new HashMap<>();
+	private static final Map<UUID, RenderedPreview> ACTIVE_PREVIEWS = new HashMap<>();
 	private static long serverTicks;
 
 	private RegionPreview() {
@@ -29,6 +38,11 @@ public final class RegionPreview {
 
 	public static void register() {
 		ServerTickEvents.END_SERVER_TICK.register(RegionPreview::onEndServerTick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> clear(handler.player));
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			ACTIVE_PREVIEWS.clear();
+			serverTicks = 0L;
+		});
 	}
 
 	public static boolean showSelectionUntilConfirmed(ServerPlayer player, RegionSelections.Selection selection) {
@@ -37,8 +51,7 @@ public final class RegionPreview {
 			return false;
 		}
 
-		ACTIVE_PREVIEWS.put(player.getUUID(), preview);
-		draw(player, preview);
+		show(player, preview);
 		return true;
 	}
 
@@ -48,8 +61,7 @@ public final class RegionPreview {
 			return false;
 		}
 
-		ACTIVE_PREVIEWS.put(player.getUUID(), preview);
-		draw(player, preview);
+		show(player, preview);
 		return true;
 	}
 
@@ -59,102 +71,102 @@ public final class RegionPreview {
 			return false;
 		}
 
-		ACTIVE_PREVIEWS.put(player.getUUID(), preview);
-		draw(player, preview);
+		show(player, preview);
 		return true;
 	}
 
 	public static void clear(ServerPlayer player) {
-		ACTIVE_PREVIEWS.remove(player.getUUID());
+		RenderedPreview rendered = ACTIVE_PREVIEWS.remove(player.getUUID());
+		if (rendered != null) {
+			rendered.remove();
+		}
 	}
 
 	private static void onEndServerTick(MinecraftServer server) {
 		serverTicks++;
-		if (serverTicks % REDRAW_INTERVAL_TICKS != 0) {
-			return;
-		}
-
-		Iterator<Map.Entry<UUID, ActivePreview>> iterator = ACTIVE_PREVIEWS.entrySet().iterator();
+		Iterator<RenderedPreview> iterator = ACTIVE_PREVIEWS.values().iterator();
 		while (iterator.hasNext()) {
-			Map.Entry<UUID, ActivePreview> entry = iterator.next();
-			ActivePreview preview = entry.getValue();
-			if (preview.isExpired(serverTicks)) {
+			RenderedPreview rendered = iterator.next();
+			ServerPlayer player = server.getPlayerList().getPlayer(rendered.player().getUUID());
+			if (player != rendered.player() || rendered.preview().isExpired(serverTicks)
+					|| !rendered.preview().canShowTo(player)) {
+				rendered.remove();
 				iterator.remove();
-				continue;
 			}
-
-			ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
-			if (player == null || !preview.canShowTo(player)) {
-				iterator.remove();
-				continue;
-			}
-
-			draw(player, preview);
 		}
 	}
 
-	private static void draw(ServerPlayer player, ActivePreview preview) {
-		if (preview.pos1() != null) {
-			showMarker(player, preview.pos1(), POS1_PARTICLE);
-		}
-
-		if (preview.pos2() != null) {
-			showMarker(player, preview.pos2(), POS2_PARTICLE);
-		}
-
+	private static void show(ServerPlayer player, ActivePreview preview) {
+		clear(player);
+		List<Integer> entityIds = new ArrayList<>();
 		if (preview.region() != null) {
-			showCuboid(player, preview.region());
+			showCuboid(player, preview.region(), entityIds);
 		}
+		if (preview.pos1() != null) {
+			showMarker(player, preview.pos1(), Blocks.CONCRETE.red(), entityIds);
+		}
+		if (preview.pos2() != null) {
+			showMarker(player, preview.pos2(), Blocks.CONCRETE.blue(), entityIds);
+		}
+		ACTIVE_PREVIEWS.put(player.getUUID(), new RenderedPreview(player, preview,
+				entityIds.stream().mapToInt(Integer::intValue).toArray()));
 	}
 
-	private static void showMarker(ServerPlayer player, BlockPos pos, DustParticleOptions particle) {
-		ServerLevel world = player.level();
-		for (int y = 0; y <= 1; y++) {
-			spawnParticle(world, player, particle, pos.getX() + 0.5D, pos.getY() + y, pos.getZ() + 0.5D);
-		}
+	private static void showMarker(ServerPlayer player, BlockPos pos, Block block, List<Integer> entityIds) {
+		showBeam(player, pos.getX() + 0.4D, pos.getY() + 0.5D, pos.getZ() + 0.4D,
+				0.2F, 1.0F, 0.2F, block, entityIds);
 	}
 
-	private static void showCuboid(ServerPlayer player, RegionRecord region) {
+	private static void showCuboid(ServerPlayer player, RegionRecord region, List<Integer> entityIds) {
 		BlockPos min = region.minPos();
 		BlockPos max = region.maxPos();
-		int stepBlocks = stepBlocks(region);
-		drawLine(player, min.getX(), min.getY(), min.getZ(), max.getX(), min.getY(), min.getZ(), stepBlocks);
-		drawLine(player, min.getX(), min.getY(), max.getZ(), max.getX(), min.getY(), max.getZ(), stepBlocks);
-		drawLine(player, min.getX(), max.getY(), min.getZ(), max.getX(), max.getY(), min.getZ(), stepBlocks);
-		drawLine(player, min.getX(), max.getY(), max.getZ(), max.getX(), max.getY(), max.getZ(), stepBlocks);
-
-		drawLine(player, min.getX(), min.getY(), min.getZ(), min.getX(), min.getY(), max.getZ(), stepBlocks);
-		drawLine(player, max.getX(), min.getY(), min.getZ(), max.getX(), min.getY(), max.getZ(), stepBlocks);
-		drawLine(player, min.getX(), max.getY(), min.getZ(), min.getX(), max.getY(), max.getZ(), stepBlocks);
-		drawLine(player, max.getX(), max.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), stepBlocks);
-
-		drawLine(player, min.getX(), min.getY(), min.getZ(), min.getX(), max.getY(), min.getZ(), stepBlocks);
-		drawLine(player, max.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), min.getZ(), stepBlocks);
-		drawLine(player, min.getX(), min.getY(), max.getZ(), min.getX(), max.getY(), max.getZ(), stepBlocks);
-		drawLine(player, max.getX(), min.getY(), max.getZ(), max.getX(), max.getY(), max.getZ(), stepBlocks);
-	}
-
-	private static int stepBlocks(RegionRecord region) {
-		BlockPos min = region.minPos();
-		BlockPos max = region.maxPos();
-		int totalEdgeLength = 4 * (Math.abs(max.getX() - min.getX()) + Math.abs(max.getY() - min.getY()) + Math.abs(max.getZ() - min.getZ()));
-		return Math.max(2, (int) Math.ceil((double) totalEdgeLength / MAX_PARTICLES_PER_DRAW));
-	}
-
-	private static void drawLine(ServerPlayer player, int startX, int startY, int startZ, int endX, int endY, int endZ, int stepBlocks) {
-		int distance = Math.max(Math.max(Math.abs(endX - startX), Math.abs(endY - startY)), Math.abs(endZ - startZ));
-		int steps = Math.max(1, distance / stepBlocks);
-		for (int i = 0; i <= steps; i++) {
-			double progress = (double) i / steps;
-			double x = startX + (endX - startX) * progress + 0.5D;
-			double y = startY + (endY - startY) * progress + 0.5D;
-			double z = startZ + (endZ - startZ) * progress + 0.5D;
-			spawnParticle(player.level(), player, OUTLINE_PARTICLE, x, y, z);
+		double[] xs = {min.getX(), (double) max.getX() + 1};
+		double[] ys = {min.getY(), (double) max.getY() + 1};
+		double[] zs = {min.getZ(), (double) max.getZ() + 1};
+		float width = (float) (xs[1] - xs[0]);
+		float height = (float) (ys[1] - ys[0]);
+		float depth = (float) (zs[1] - zs[0]);
+		double half = BEAM_WIDTH / 2.0D;
+		for (double y : ys) {
+			for (double z : zs) {
+				showBeam(player, xs[0] - half, y - half, z - half,
+						width + BEAM_WIDTH, BEAM_WIDTH, BEAM_WIDTH, Blocks.CONCRETE.lime(), entityIds);
+			}
+		}
+		for (double x : xs) {
+			for (double z : zs) {
+				showBeam(player, x - half, ys[0] - half, z - half,
+						BEAM_WIDTH, height + BEAM_WIDTH, BEAM_WIDTH, Blocks.CONCRETE.lime(), entityIds);
+			}
+			for (double y : ys) {
+				showBeam(player, x - half, y - half, zs[0] - half,
+						BEAM_WIDTH, BEAM_WIDTH, depth + BEAM_WIDTH, Blocks.CONCRETE.lime(), entityIds);
+			}
 		}
 	}
 
-	private static void spawnParticle(ServerLevel world, ServerPlayer player, DustParticleOptions particle, double x, double y, double z) {
-		world.sendParticles(player, particle, true, false, x, y, z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+	private static void showBeam(ServerPlayer player, double x, double y, double z,
+			float width, float height, float depth, Block block, List<Integer> entityIds) {
+		// Allocate a normal entity ID, but never add this display to the server world.
+		Display.BlockDisplay display = new Display.BlockDisplay(EntityTypes.BLOCK_DISPLAY, player.level());
+		display.setPos(x, y, z);
+		display.setBlockState(block.defaultBlockState());
+		display.setTransformation(new Transformation(null, null, new Vector3f(width, height, depth), null));
+		display.setBrightnessOverride(new Brightness(15, 15));
+		display.setViewRange(16.0F);
+		player.connection.send(new ClientboundAddEntityPacket(display.getId(), display.getUUID(),
+				x, y, z, 0, 0, EntityTypes.BLOCK_DISPLAY, 0, Vec3.ZERO, 0));
+		var data = display.getEntityData().getNonDefaultValues();
+		if (data != null) {
+			player.connection.send(new ClientboundSetEntityDataPacket(display.getId(), data));
+		}
+		entityIds.add(display.getId());
+	}
+
+	private record RenderedPreview(ServerPlayer player, ActivePreview preview, int[] entityIds) {
+		void remove() {
+			player.connection.send(new ClientboundRemoveEntitiesPacket(entityIds));
+		}
 	}
 
 	private record ActivePreview(UUID ownerUuid, ResourceKey<Level> worldKey, BlockPos pos1, BlockPos pos2, RegionRecord region, long expiresAtTick) {

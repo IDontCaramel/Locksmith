@@ -10,6 +10,9 @@ public final class RegionChecks {
 
 	public static boolean isShopPlacementAllowed(ServerLevel world, BlockPos pos) {
 		RegionStorage storage = RegionStorage.get(world);
+		if (!storage.isEnforced()) {
+			return true;
+		}
 		for (RegionRecord region : storage.regions()) {
 			if (region.contains(world.dimension(), pos)) {
 				return true;

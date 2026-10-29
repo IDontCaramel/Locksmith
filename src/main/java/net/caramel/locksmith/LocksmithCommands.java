@@ -21,6 +21,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
+import static com.mojang.brigadier.arguments.BoolArgumentType.getBool;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
@@ -50,11 +52,13 @@ public final class LocksmithCommands {
 										.executes(LocksmithCommands::executeSell))))
 				.then(literal("region")
 						.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-						.then(literal("set")
-								.then(literal("pos1")
-										.executes(context -> executeSetRegionPos(context, true)))
-								.then(literal("pos2")
-										.executes(context -> executeSetRegionPos(context, false))))
+						.then(literal("pos1")
+								.executes(context -> executeSetRegionPos(context, true)))
+						.then(literal("pos2")
+								.executes(context -> executeSetRegionPos(context, false)))
+						.then(literal("enforce")
+								.then(argument("enabled", bool())
+										.executes(LocksmithCommands::executeSetRegionEnforcement)))
 						.then(literal("confirm")
 								.then(argument("region_name", word())
 										.executes(LocksmithCommands::executeConfirmRegion)))
@@ -167,6 +171,7 @@ public final class LocksmithCommands {
 		CommandSourceStack source = context.getSource();
 		RegionStorage storage = RegionStorage.get(source.getLevel());
 
+		source.sendSuccess(() -> Component.literal("Region enforcement: " + storage.isEnforced()), false);
 		source.sendSuccess(() -> Component.literal("Spawn radius: " + storage.spawnRadius()), false);
 		if (storage.regions().isEmpty()) {
 			source.sendSuccess(() -> Component.literal("No custom shop regions"), false);
@@ -188,6 +193,13 @@ public final class LocksmithCommands {
 		}
 
 		context.getSource().sendSuccess(() -> Component.literal("Region " + name + " deleted"), false);
+		return 1;
+	}
+
+	private static int executeSetRegionEnforcement(CommandContext<CommandSourceStack> context) {
+		boolean enabled = getBool(context, "enabled");
+		RegionStorage.get(context.getSource().getLevel()).setEnforced(enabled);
+		context.getSource().sendSuccess(() -> Component.literal("Region enforcement set to " + enabled), false);
 		return 1;
 	}
 

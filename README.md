@@ -36,10 +36,11 @@ Every command also works with the short alias `/ls`, for example `/ls sell 10 mi
 | Command | Description |
 |---------|-------------|
 | `/locksmith admin` | Toggles admin shop access mode allows opening any shop chest |
-| `/locksmith region set pos1` | Sets the first corner of a new shop region at your current position |
-| `/locksmith region set pos2` | Sets the second corner of a new shop region at your current position |
+| `/locksmith region pos1` | Sets the first corner of a new shop region at your current position |
+| `/locksmith region pos2` | Sets the second corner of a new shop region at your current position |
 | `/locksmith region confirm <name>` | Creates the shop region from the two set positions |
-| `/locksmith region list` | Lists all defined shop regions and the current spawn radius |
+| `/locksmith region enforce <true/false>` | Enables or disables shop placement restrictions server-wide, saved across restarts (default: true) |
+| `/locksmith region list` | Lists all defined shop regions, enforcement status, and the current spawn radius |
 | `/locksmith region delete <name>` | Deletes a named shop region |
 | `/locksmith region preview` | Shows a visual preview of the current region selection |
 | `/locksmith region preview <name>` | Shows a visual preview of a saved region |

@@ -1,7 +1,7 @@
-package net.caramel.safesale;
+package net.caramel.locksmith;
 
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
 
 import java.util.Comparator;
 import java.util.Locale;
@@ -33,7 +33,7 @@ public final class ShopNameParser {
 		}
 
 		String remainingName = name.substring(firstSpace + 1).toLowerCase(Locale.ROOT);
-		return Registries.ITEM.stream()
+		return BuiltInRegistries.ITEM.stream()
 				.sorted(Comparator.comparingInt(item -> -formatItemName(item).length()))
 				.filter(item -> startsWithItemName(remainingName, formatItemName(item)))
 				.findFirst()
@@ -41,7 +41,7 @@ public final class ShopNameParser {
 	}
 
 	private static String formatItemName(Item item) {
-		return item.getName().getString().toLowerCase(Locale.ROOT);
+		return item.getDefaultInstance().getItemName().getString().toLowerCase(Locale.ROOT);
 	}
 
 	private static boolean startsWithItemName(String value, String itemName) {

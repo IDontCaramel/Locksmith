@@ -1,14 +1,14 @@
-package net.caramel.safesale;
+package net.caramel.locksmith;
 
 import net.fabricmc.api.ModInitializer;
 
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SafeSale implements ModInitializer {
-	public static final String MOD_ID = "safesale";
+public class Locksmith implements ModInitializer {
+	public static final String MOD_ID = "locksmith";
 
 	// This logger is used to write text to the console and the log file.
 	// It is considered best practice to use your mod id as the logger's name.
@@ -18,13 +18,13 @@ public class SafeSale implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ShopScreens.register();
-		SafeSaleCommands.register();
+		LocksmithCommands.register();
 		ShopEvents.register();
 		RegionPreview.register();
-		LOGGER.info("SafeSale initialized");
+		LOGGER.info("Locksmith initialized");
 	}
 
 	public static Identifier id(String path) {
-		return new Identifier(MOD_ID, path);
+		return Identifier.fromNamespaceAndPath(MOD_ID, path);
 	}
 }

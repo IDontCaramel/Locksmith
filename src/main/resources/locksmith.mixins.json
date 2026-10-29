@@ -1,7 +1,7 @@
 {
 	"required": true,
-	"package": "net.caramel.safesale.mixin",
-	"compatibilityLevel": "JAVA_17",
+	"package": "net.caramel.locksmith.mixin",
+	"compatibilityLevel": "JAVA_25",
 	"mixins": [
 		"BlockItemMixin"
 	],

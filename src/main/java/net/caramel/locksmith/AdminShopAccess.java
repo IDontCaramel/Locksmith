@@ -1,4 +1,4 @@
-package net.caramel.safesale;
+package net.caramel.locksmith;
 
 import java.util.HashSet;
 import java.util.Set;
